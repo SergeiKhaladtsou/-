@@ -1,0 +1,82 @@
+#include <msp430.h> 
+volatile int press = 0;
+volatile int led = 0;
+
+void switch_press(void){
+	press ^= BIT0;
+}
+
+#pragma vector = PORT1_VECTOR
+__interrupt void PORT_ISR(void){
+	switch_press();
+	led = 0;
+	P1IFG &= ~BIT7;
+	P1OUT &= ~BIT1;
+	P1OUT &= ~BIT2;
+	P1OUT &= ~BIT3;
+	P1OUT &= ~BIT4;
+	P1OUT &= ~BIT5;
+}
+
+#pragma vector = TIMER0_A0_VECTOR
+__interrupt void Timer_A0(void)
+{
+	if (press){
+		if (led > 4)
+			led = 0;
+		switch(led){
+			case 0:
+				P1OUT |= BIT1;
+				P1OUT &= ~BIT5;
+				break;
+			case 1:
+				P1OUT |= BIT2;
+				P1OUT &= ~BIT1;
+				break;
+			case 2:
+				P1OUT |= BIT3;
+				P1OUT &= ~BIT2;
+				break;
+			case 3:
+				P1OUT |= BIT4;
+				P1OUT &= ~BIT3;
+				break;
+			case 4:
+				P1OUT |= BIT5;
+				P1OUT &= ~BIT4;
+				break;
+		}
+		led++;
+	}
+}
+
+/*
+ * main.c
+ */
+int main(void) {
+    WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
+
+    P1DIR &= ~BIT7; // INIT BUTTON S1
+    P1REN |= BIT7;
+    P1OUT |= BIT7;
+
+    P1DIR |= BIT1;	// INIT LED4-LED8
+    P1DIR |= BIT2;
+    P1DIR |= BIT3;
+    P1DIR |= BIT4;
+    P1DIR |= BIT5;
+
+    P1IE |= BIT7;
+    P1IES |= BIT7;
+
+    TA0CTL = TASSEL_2 + MC_2 + TACLR + ID_2;	// SMCLK, continuous, clear TAR, /8
+	TA0CCTL0 |= CCIE;                           // CCR0 interrupt enabled
+
+    P1OUT |= BIT1;
+    P1OUT &= ~BIT1;
+
+    __bis_SR_register(LPM0_bits + GIE);
+    while(1){
+    	__no_operation();
+    }
+}

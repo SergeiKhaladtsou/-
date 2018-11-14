@@ -1,0 +1,54 @@
+#include <msp430.h> 
+
+/*
+ * main.c
+ */
+int main(void) {
+    WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
+	
+    int j, i = 0;
+
+    P2DIR &= ~BIT2; // INIT BUTTON S2
+    P2REN |= BIT2;
+    P2OUT |= BIT2;
+
+    P1DIR |= BIT0;	// INIT LED1-LED3
+    P8DIR |= BIT1;
+    P8DIR |= BIT2;
+
+    P1OUT = 0;
+    P8OUT = 0;
+
+    while(1){
+    	if((P2IN & BIT2) == 0){
+    		i++;
+    		switch(i){
+				case 1: { //ON LED1-LED3
+					P1OUT |= BIT0;
+					P8OUT |= BIT1;
+					P8OUT |= BIT2;
+					break;
+				}
+				case 2: { //OFF LED1
+					P1OUT ^= BIT0;
+					break;
+				}
+				case 3: { //OFF LED2
+					P8OUT ^= BIT1;
+					break;
+				}
+				case 4: { //OFF LED3
+					P8OUT ^= BIT2;
+					i = 0;
+					break;
+				}
+    		}
+    		while((P2IN & BIT2) == 0){ //DELAY
+    			for(j = 0; j < 30000; j++ )
+    				j = j*j/j;
+    		}
+    	}
+    }
+
+	return 0;
+}
