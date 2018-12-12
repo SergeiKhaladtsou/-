@@ -4,8 +4,6 @@ SIZE_PACKETH = 1024
 
 include Socket::Constants
 
-#socket = TCPServer.open "#{address.strip!}", 2000
-
 print "Input your ip address: "
 address = gets
 
@@ -58,8 +56,12 @@ loop do
         else
           file = File.open file_name, "rb"
           socket[0].puts file.size
-          data = file.read
-          socket[0].puts data
+          socket[0].puts last_packeth = file.size % SIZE_PACKETH
+          socket[0].puts quantity = file.size / SIZE_PACKETH
+          quantity.times do
+            socket[0].write file.read(SIZE_PACKETH)
+          end
+          socket[0].write file.read(last_packeth)
           file.close
         end
       when 5
@@ -69,6 +71,39 @@ loop do
         socket[0].close
         server.close
         exit
+      when 7
+        file_name = socket[0].gets
+        last_packeth = socket[0].gets
+        quantity = socket[0].gets
+        file_name.strip!
+        last_packeth.strip!
+        quantity.strip!
+        packeth = socket[0].gets
+        packeth.strip!
+        file = File.open file_name, "w+b"
+        quantity.to_i.times do |pack|
+          next if pack < packeth.to_i
+          data = socket[0].read(SIZE_PACKETH)
+          file.write data
+        end
+        file.write socket[0].read(last_packeth.to_i)
+        file.close
+      when 8
+        file_name = socket[0].gets
+        file_name.strip!
+        packeth = socket[0].gets
+        packeth.strip!
+        last_packeth = socket[0].gets
+        last_packeth.strip!
+        quantity = socket[0].gets
+        quantity.strip!
+        file = File.open file_name, "rb"
+        quantity.to_i.times do |pack|
+          data = file.read(SIZE_PACKETH)
+          next if pack < packeth.to_i
+          socket[0].puts data
+        end
+        socket[0].puts file.read(last_packeth.to_i)
       end
     end
   end
