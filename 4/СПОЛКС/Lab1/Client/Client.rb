@@ -72,16 +72,7 @@ loop do
       start_time = Time.now
       file = File.open file_name, "wb"
       quantity.to_i.times do |packeth|
-        begin
-          data = client.read(SIZE_PACKETH)
-        rescue
-          report = File.new "Error_report", "rb"
-          report.write 4
-          report.write file_name
-          report.write packeth
-          retry
-        end
-        file.write data
+        file.write client.read(SIZE_PACKETH)
       end
       file.write client.read(last_packeth.to_i)
       file.close

@@ -57,8 +57,8 @@ loop do
           quantity = socket[0].gets
           last_packeth = check_size.to_i % SIZE_PACKETH
           quantity.to_i.times do |packeth|
-            data = socket[0].read(SIZE_PACKETH)
             begin
+              data = socket[0].read(SIZE_PACKETH)
               file.write data
             rescue
               report = File.new "Error_report", "rb"
@@ -82,8 +82,17 @@ loop do
           socket[0].puts file.size
           socket[0].puts last_packeth = file.size % SIZE_PACKETH
           socket[0].puts quantity = file.size / SIZE_PACKETH
-          quantity.times do
-            socket[0].write file.read(SIZE_PACKETH)
+          quantity.times do |packeth|
+            data = file.read(SIZE_PACKETH)
+            begin
+              socket[0].write data
+            rescue
+              report = File.new "Error_report", "rb"
+              report.write 4
+              report.write file_name
+              report.write packeth
+              exit
+            end
           end
           socket[0].write file.read(last_packeth)
           file.close
