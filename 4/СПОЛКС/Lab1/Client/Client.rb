@@ -128,7 +128,7 @@ loop do
       client.puts quantity = file.size / SIZE_PACKETH
       start_time = Time.now
       quantity.times do |packeth|
-        data = file.read
+        data = file.read(SIZE_PACKETH)
         begin
           client.write data
         rescue
