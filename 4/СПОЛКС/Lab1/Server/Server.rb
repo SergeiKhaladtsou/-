@@ -80,7 +80,7 @@ loop do
         quantity.strip!
         packeth = socket[0].gets
         packeth.strip!
-        file = File.open file_name, "w+b"
+        file = File.open file_name, "ab"
         quantity.to_i.times do |pack|
           next if pack < packeth.to_i
           data = socket[0].read(SIZE_PACKETH)

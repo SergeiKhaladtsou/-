@@ -17,7 +17,7 @@ def resume_upload(file_name, packeth, client)
     client.puts quantity
     client.puts packeth
     quantity.times do |pack|
-      data = file.read
+      data = file.read(SIZE_PACKETH)
       next if pack < packeth
       begin
         client.write data
@@ -26,7 +26,8 @@ def resume_upload(file_name, packeth, client)
         report.write 3
         report.write file_name
         report.write packeth
-        retry
+        exit
+        #retry
       end
     end
     client.write file.read(last_packeth)
@@ -39,7 +40,7 @@ def resume_download(file_name, packeth, client)
   client.puts server_command
   client.puts file_name
   client.puts packeth
-  file = File.open file_name, "w+b"
+  file = File.open file_name, "ab"
   last_packeth = file.size % SIZE_PACKETH
   client.puts last_packeth
   quantity = file.size / SIZE_PACKETH
@@ -53,7 +54,8 @@ def resume_download(file_name, packeth, client)
       report.write 4
       report.write file_name
       report.write packeth
-      retry
+      exit
+      #retry
     end
     file.write data
   end
@@ -93,7 +95,7 @@ loop do
     packeth = report.readline
     packeth.strip!
     report.close
-    File.delete(Error_report)
+    File.delete("Error_report")
     if command.to_i == 3
       resume_upload(file_name, packeth, client)
     else
