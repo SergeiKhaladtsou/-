@@ -4,66 +4,6 @@ SIZE_PACKETH = 1024
 
 include Socket::Constants
 
-def resume_upload(file_name, packeth, socket[0])
-  socket[0]_command = 7
-  unless File.exist?(file_name)
-    puts "File don't exist"
-  else
-    file = File.open file_name, "rb"
-    socket[0].puts server_command
-    socket[0].puts file_name
-    last_packeth = file.size % SIZE_PACKETH
-    socket[0].puts last_packeth
-    quantity = file.size / SIZE_PACKETH
-    socket[0].puts quantity
-    socket[0].puts packeth
-    quantity.times do |pack|
-      data = file.read(SIZE_PACKETH)
-      next if pack < packeth
-      begin
-        socket[0].write data
-      rescue
-        report = File.new "Error_report", "rb"
-        report.write 3
-        report.write file_name
-        report.write packeth
-        exit
-        #retry
-      end
-    end
-    socket[0].write file.read(last_packeth)
-    file.close
-  end
-end
-
-def resume_download(file_name, packeth, socket[0])
-  socket[0]_command = 8
-  socket[0].puts server_command
-  socket[0].puts file_name
-  socket[0].puts packeth
-  file = File.open file_name, "ab"
-  last_packeth = file.size % SIZE_PACKETH
-  socket[0].puts last_packeth
-  quantity = file.size / SIZE_PACKETH
-  socket[0].puts quantity
-  quantity.times do |pack|
-    next if pack < packeth
-    begin
-      data = socket[0].read(SIZE_PACKETH)
-    rescue
-      report = File.new "Error_report", "rb"
-      report.write 4
-      report.write file_name
-      report.write packeth
-      exit
-      #retry
-    end
-    file.write data
-  end
-  file.write socket[0].read(last_packeth)
-  file.close
-end
-
 print "Input your ip address: "
 address = gets
 
@@ -158,4 +98,64 @@ loop do
       end
     end
   end
+end
+
+def resume_upload(file_name, packeth, socket[0])
+  socket[0]_command = 7
+  unless File.exist?(file_name)
+    puts "File don't exist"
+  else
+    file = File.open file_name, "rb"
+    socket[0].puts server_command
+    socket[0].puts file_name
+    last_packeth = file.size % SIZE_PACKETH
+    socket[0].puts last_packeth
+    quantity = file.size / SIZE_PACKETH
+    socket[0].puts quantity
+    socket[0].puts packeth
+    quantity.times do |pack|
+      data = file.read(SIZE_PACKETH)
+      next if pack < packeth
+      begin
+        socket[0].write data
+      rescue
+        report = File.new "Error_report", "rb"
+        report.write 3
+        report.write file_name
+        report.write packeth
+        exit
+        #retry
+      end
+    end
+    socket[0].write file.read(last_packeth)
+    file.close
+  end
+end
+
+def resume_download(file_name, packeth, socket[0])
+  socket[0]_command = 8
+  socket[0].puts server_command
+  socket[0].puts file_name
+  socket[0].puts packeth
+  file = File.open file_name, "ab"
+  last_packeth = file.size % SIZE_PACKETH
+  socket[0].puts last_packeth
+  quantity = file.size / SIZE_PACKETH
+  socket[0].puts quantity
+  quantity.times do |pack|
+    next if pack < packeth
+    begin
+      data = socket[0].read(SIZE_PACKETH)
+    rescue
+      report = File.new "Error_report", "rb"
+      report.write 4
+      report.write file_name
+      report.write packeth
+      exit
+      #retry
+    end
+    file.write data
+  end
+  file.write socket[0].read(last_packeth)
+  file.close
 end
