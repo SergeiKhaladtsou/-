@@ -24,13 +24,12 @@ loop do
     else
       puts "Resume ..."
       report = File.open "Error_report", "rb"
-      command = report.readline
-      command.strip!
-      file_name = report.readline
-      file_name.strip!
-      packeth = report.readline
-      packeth.strip!
+      data = report.read
       report.close
+      command, file_name, packeth = data.split("-")
+      command.strip!
+      file_name.strip!
+      packeth.strip!
       File.delete("Error_report")
       if command.to_i == 3
         resume_upload(file_name, packeth, socket[0])
@@ -62,9 +61,9 @@ loop do
               file.write data
             rescue
               report = File.new "Error_report", "wb"
-              report.write 3
-              report.write file_name
-              report.write packeth
+              report.write "3-"
+              report.write "file_name-"
+              report.write "packeth-"
               exit
             end
           end
@@ -88,9 +87,9 @@ loop do
               socket[0].write data
             rescue
               report = File.new "Error_report", "wb"
-              report.write 4
-              report.write file_name
-              report.write packeth
+              report.write "4-"
+              report.write "file_name-"
+              report.write "packeth-"
               exit
             end
           end
