@@ -61,7 +61,7 @@ loop do
               data = socket[0].read(SIZE_PACKETH)
               file.write data
             rescue
-              report = File.new "Error_report", "rb"
+              report = File.new "Error_report", "wb"
               report.write 3
               report.write file_name
               report.write packeth
@@ -82,12 +82,12 @@ loop do
           socket[0].puts file.size
           socket[0].puts last_packeth = file.size % SIZE_PACKETH
           socket[0].puts quantity = file.size / SIZE_PACKETH
-          quantity.times do |packeth|
+          quantity.times do
             data = file.read(SIZE_PACKETH)
             begin
               socket[0].write data
             rescue
-              report = File.new "Error_report", "rb"
+              report = File.new "Error_report", "wb"
               report.write 4
               report.write file_name
               report.write packeth
@@ -128,7 +128,7 @@ def resume_upload(file_name, packeth, socket)
       begin
         socket.write data
       rescue
-        report = File.new "Error_report", "rb"
+        report = File.new "Error_report", "wb"
         report.write 3
         report.write file_name
         report.write packeth
@@ -156,7 +156,7 @@ def resume_download(file_name, packeth, socket)
     begin
       data = socket.read(SIZE_PACKETH)
     rescue
-      report = File.new "Error_report", "rb"
+      report = File.new "Error_report", "wb"
       report.write 4
       report.write file_name
       report.write packeth
