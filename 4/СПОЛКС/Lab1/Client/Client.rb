@@ -15,16 +15,27 @@ client.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPIDLE, true)
 client.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPINTVL, true)
 
 client.connect(sockaddr)
+puts "Do you want resume ? (1/0)"
+ans = gets
 loop do
-  puts "1. Time"
-  puts "2. Echo"
-  puts "3. Upload"
-  puts "4. Download"
-  puts "5. Disconnect"
-  puts "6. Close server and disconnect"
-  command = gets
+  command = if ans.to_i == 1
+              command = client.gets
+              puts command #Косяк рядом
+              ans = 0
+              command
+            else
+              puts "1. Time"
+              puts "2. Echo"
+              puts "3. Upload"
+              puts "4. Download"
+              puts "5. Disconnect"
+              puts "6. Close server and disconnect"
+              command = gets
+              client.puts command.strip.to_i.to_s 2
+              command
+            end
+  puts command
   command.strip!
-  client.puts command.to_i.to_s 2
   case command.to_i
   when 1
     start_time = Time.now
@@ -36,6 +47,9 @@ loop do
     client.puts "ECHO #{line = gets}"
     puts "Answer: #{client.gets}"
   when 3
+    puts "File list:"
+    puts `ls`
+    puts
     printf "Input file name: "
     file_name = gets
     file_name.strip!
@@ -50,6 +64,7 @@ loop do
       client.puts quantity = file.size / SIZE_PACKETH
       start_time = Time.now
       quantity.times do |packeth|
+        puts packeth
         data = file.read(SIZE_PACKETH)
         client.write data
       end
@@ -108,16 +123,18 @@ loop do
     file_name.strip!
     packeth = client.gets
     packeth.strip!
-    last_packeth = client.gets
-    last_packeth.strip!
-    quantity = client.gets
-    quantity.strip!
     file = File.open file_name, "rb"
+    last_packeth = file.size % SIZE_PACKETH
+    client.puts last_packeth
+    quantity = file.size / SIZE_PACKETH
+    client.puts quantity
     quantity.to_i.times do |pack|
       data = file.read(SIZE_PACKETH)
       next if pack < packeth.to_i
+      puts pack
       client.puts data
     end
-    client.puts file.read(last_packeth.to_i)
+    client.puts file.read(last_packeth)
+    file.close
   end
 end

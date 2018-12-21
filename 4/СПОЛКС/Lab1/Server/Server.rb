@@ -4,6 +4,64 @@ SIZE_PACKETH = 1024
 
 include Socket::Constants
 
+def resume_download(file_name, packeth, socket)
+  server_command = 7
+  unless File.exist?(file_name)
+    puts "File don't exist"
+  else
+    file = File.open file_name, "rb"
+    socket.puts server_command
+    socket.puts file_name
+    last_packeth = file.size % SIZE_PACKETH
+    socket.puts last_packeth
+    quantity = file.size / SIZE_PACKETH
+    socket.puts quantity
+    socket.puts packeth
+    quantity.times do |pack|
+      data = file.read(SIZE_PACKETH)
+      next if pack < packeth.to_i
+      begin
+        socket.write data
+      rescue
+        report = File.new "Error_report", "wb"
+        report.write "3-"
+        report.write "#{file_name}-"
+        report.write "#{pack}-"
+        exit
+      end
+    end
+    socket.write file.read(last_packeth)
+    file.close
+  end
+end
+
+def resume_upload(file_name, packeth, socket)
+  server_command = 8
+  socket.puts server_command
+  socket.puts file_name
+  socket.puts packeth
+  file = File.open file_name, "ab"
+  last_packeth = socket.gets
+  last_packeth.strip!
+  quantity = socket.gets
+  quantity.strip!
+  quantity.to_i.times do |pack|
+    next if pack < packeth.to_i
+    begin
+      data = socket.read(SIZE_PACKETH)
+    rescue
+      report = File.new "Error_report", "wb"
+      report.write "4-"
+      report.write "#{file_name}-"
+      report.write "#{pack}-"
+      exit
+    end
+    file.write data
+  end
+  file.write socket.read(last_packeth.to_i)
+  file.close
+end
+
 print "Input your ip address: "
 address = gets
 
@@ -26,12 +84,12 @@ loop do
       report = File.open "Error_report", "rb"
       data = report.read
       report.close
-      command, file_name, packeth = data.split("-")
-      command.strip!
+      comand, file_name, packeth = data.split("-")
+      comand.strip!
       file_name.strip!
       packeth.strip!
       File.delete("Error_report")
-      if command.to_i == 3
+      if comand.to_i == 3
         resume_upload(file_name, packeth, socket[0])
       else
         resume_download(file_name, packeth, socket[0])
@@ -62,8 +120,8 @@ loop do
             rescue
               report = File.new "Error_report", "wb"
               report.write "3-"
-              report.write "file_name-"
-              report.write "packeth-"
+              report.write "#{file_name}-"
+              report.write "#{packeth}-"
               exit
             end
           end
@@ -81,15 +139,15 @@ loop do
           socket[0].puts file.size
           socket[0].puts last_packeth = file.size % SIZE_PACKETH
           socket[0].puts quantity = file.size / SIZE_PACKETH
-          quantity.times do
+          quantity.times do |packeth|
             data = file.read(SIZE_PACKETH)
             begin
               socket[0].write data
             rescue
               report = File.new "Error_report", "wb"
               report.write "4-"
-              report.write "file_name-"
-              report.write "packeth-"
+              report.write "#{file_name}-"
+              report.write "#{packeth}-"
               exit
             end
           end
@@ -106,63 +164,4 @@ loop do
       end
     end
   end
-end
-
-def resume_upload(file_name, packeth, socket)
-  server_command = 7
-  unless File.exist?(file_name)
-    puts "File don't exist"
-  else
-    file = File.open file_name, "rb"
-    socket.puts server_command
-    socket.puts file_name
-    last_packeth = file.size % SIZE_PACKETH
-    socket.puts last_packeth
-    quantity = file.size / SIZE_PACKETH
-    socket.puts quantity
-    socket.puts packeth
-    quantity.times do |pack|
-      data = file.read(SIZE_PACKETH)
-      next if pack < packeth
-      begin
-        socket.write data
-      rescue
-        report = File.new "Error_report", "wb"
-        report.write 3
-        report.write file_name
-        report.write packeth
-        exit
-        #retry
-      end
-    end
-    socket.write file.read(last_packeth)
-    file.close
-  end
-end
-
-def resume_download(file_name, packeth, socket)
-  server_command = 8
-  socket.puts server_command
-  socket.puts file_name
-  socket.puts packeth
-  file = File.open file_name, "ab"
-  last_packeth = file.size % SIZE_PACKETH
-  socket.puts last_packeth
-  quantity = file.size / SIZE_PACKETH
-  socket.puts quantity
-  quantity.times do |pack|
-    next if pack < packeth
-    begin
-      data = socket.read(SIZE_PACKETH)
-    rescue
-      report = File.new "Error_report", "wb"
-      report.write 4
-      report.write file_name
-      report.write packeth
-      exit
-    end
-    file.write data
-  end
-  file.write socket.read(last_packeth)
-  file.close
 end
