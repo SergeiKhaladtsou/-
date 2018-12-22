@@ -33,7 +33,6 @@ loop do
               client.send command, 0
               command
             end
-  puts command
   command.strip!
   case command.to_i 2
   when 1
@@ -66,8 +65,8 @@ loop do
       start_time = Time.now
       quantity.times do |packeth|
         puts packeth
-        data = file.read(SIZE_PACKETH)
-        client.write data
+        client.send file.read(SIZE_PACKETH), 0
+        ans, sender = client.recvfrom(SIZE_PACKETH)
       end
       client.write file.read(last_packeth)
       file.close

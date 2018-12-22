@@ -110,8 +110,9 @@ loop do
         last_packeth = check_size.to_i % SIZE_PACKETH
         quantity.to_i.times do |packeth|
           begin
-            data = server.read(SIZE_PACKETH)
+            data, sender = server.recvfrom(SIZE_PACKETH)
             file.write data
+            server.send "yes", 0, sender
           rescue
             report = File.new "Error_report", "wb"
             report.write "3-"
@@ -120,7 +121,8 @@ loop do
             exit
           end
         end
-        file.write server.read(last_packeth)
+        data, sender = server.recvfrom(last_packeth)
+        file.write data
         file.close
       end
     when 4
