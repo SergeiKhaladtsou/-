@@ -1,8 +1,5 @@
 require "socket"
 
-#command, sender = server.recvfrom(SIZE_PACKETH)
-#server.send "Server time #{Time.now}", 0, sender
-
 SIZE_PACKETH = 1024
 
 include Socket::Constants
@@ -75,7 +72,7 @@ p server.connect_address
 
 loop do
   unless File.exist?("Error_report")
-      command, sender = server.recvfrom
+      command, sender = server.recvfrom(SIZE_PACKETH)
   else
     puts "Resume ..."
       report = File.open "Error_report", "rb"
@@ -98,17 +95,17 @@ loop do
       puts Time.now
       server.send "Server time #{Time.now}", 0, sender
     when 2
-      line, sender = server.recvfrom
+      line, sender = server.recvfrom(SIZE_PACKETH)
       puts line.strip!
       server.send line.delete("ECHO "), 0, sender
     when 3
-      file_name, sender = server.recvfrom
+      file_name, sender = server.recvfrom(SIZE_PACKETH)
       file_name.strip!
-      check_size, sender = server.recvfrom
+      check_size, sender = server.recvfrom(SIZE_PACKETH)
       check_size.strip!
       unless check_size.to_i == 0
         file = File.open file_name, "wb"
-        quantity, sender = server.recvfrom
+        quantity, sender = server.recvfrom(SIZE_PACKETH)
         last_packeth = check_size.to_i % SIZE_PACKETH
         quantity.to_i.times do |packeth|
           begin
@@ -126,7 +123,7 @@ loop do
         file.close
       end
     when 4
-      file_name, sender = server.recvfrom
+      file_name, sender = server.recvfrom(SIZE_PACKETH)
       file_name.strip!
       unless File.exist?(file_name)
         puts "File don't exits!"

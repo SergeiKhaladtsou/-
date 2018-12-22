@@ -19,7 +19,7 @@ puts "Do you want resume ? (1/0)"
 ans = gets
 loop do
   command = if ans.to_i == 1
-              command, sender = client.recvfrom
+              command, sender = client.recvfrom(SIZE_PACKETH)
               puts command
               ans = 0
               command
@@ -40,13 +40,13 @@ loop do
   case command.to_i
   when 1
     start_time = Time.now
-    line, sender = client.recvfrom
+    line, sender = client.recvfrom(SIZE_PACKETH)
     line.strip!
     puts line
   when 2
     print "Input strintg "
     client.send "ECHO #{line = gets}", 0
-    line, sender = client.recvfrom
+    line, sender = client.recvfrom(SIZE_PACKETH)
     puts "Answer: #{line}"
   when 3
     puts "File list:"
@@ -79,11 +79,11 @@ loop do
     file_name = gets
     file_name.strip!
     client.send file_name, 0
-    check_size, sender = client.recvfrom
+    check_size, sender = client.recvfrom(SIZE_PACKETH)
     check_size.strip!
-    last_packeth, sender = client.recvfrom
+    last_packeth, sender = client.recvfrom(SIZE_PACKETH)
     last_packeth.strip!
-    quantity, sender = client.recvfrom
+    quantity, sender = client.recvfrom(SIZE_PACKETH)
     quantity.strip!
     unless check_size.to_i == 0
       start_time = Time.now
@@ -104,13 +104,13 @@ loop do
     client.close
     break
   when 7
-    file_name, sender = client.recvfrom
-    last_packeth, sender = client.recvfrom
-    quantity, sender = client.recvfrom
+    file_name, sender = client.recvfrom(SIZE_PACKETH)
+    last_packeth, sender = client.recvfrom(SIZE_PACKETH)
+    quantity, sender = client.recvfrom(SIZE_PACKETH)
     file_name.strip!
     last_packeth.strip!
     quantity.strip!
-    packeth, sender = client.recvfrom
+    packeth, sender = client.recvfrom(SIZE_PACKETH)
     packeth.strip!
     file = File.open file_name, "ab"
     quantity.to_i.times do |pack|
@@ -121,9 +121,9 @@ loop do
     file.write client.read(last_packeth.to_i)
     file.close
   when 8
-    file_name, sender = client.recvfrom
+    file_name, sender = client.recvfrom(SIZE_PACKETH)
     file_name.strip!
-    packeth, sender = client.recvfrom
+    packeth, sender = client.recvfrom(SIZE_PACKETH)
     packeth.strip!
     file = File.open file_name, "rb"
     last_packeth = file.size % SIZE_PACKETH
