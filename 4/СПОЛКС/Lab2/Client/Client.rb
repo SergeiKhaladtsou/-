@@ -10,11 +10,9 @@ client = Socket.new(AF_INET, SOCK_DGRAM, 0)
 sockaddr = Socket.pack_sockaddr_in(2000, address.strip!)
 
 client.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, 30)
-client.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPCNT, true)
-client.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPIDLE, true)
-client.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPINTVL, true)
 
 client.connect(sockaddr)
+client.send "1", 0
 puts "Do you want resume ? (1/0)"
 ans = gets
 loop do
@@ -37,7 +35,7 @@ loop do
             end
   puts command
   command.strip!
-  case command.to_i
+  case command.to_i 2
   when 1
     start_time = Time.now
     line, sender = client.recvfrom(SIZE_PACKETH)
@@ -61,9 +59,10 @@ loop do
       client.send 0, 0
     else
       file = File.open file_name, "rb"
-      client.send file.size, 0
+      client.send file.size.to_s, 0
       last_packeth = file.size % SIZE_PACKETH
-      client.send quantity = file.size / SIZE_PACKETH, 0
+      quantity = file.size / SIZE_PACKETH
+      client.send quantity.to_s, 0
       start_time = Time.now
       quantity.times do |packeth|
         puts packeth
@@ -127,9 +126,9 @@ loop do
     packeth.strip!
     file = File.open file_name, "rb"
     last_packeth = file.size % SIZE_PACKETH
-    client.send last_packeth, 0
+    client.send last_packeth.to_s, 0
     quantity = file.size / SIZE_PACKETH
-    client.send quantity, 0
+    client.send quantity.to_s, 0
     quantity.to_i.times do |pack|
       data = file.read(SIZE_PACKETH)
       next if pack < packeth.to_i

@@ -20,7 +20,6 @@ ans = gets
 loop do
   command = if ans.to_i == 1
               command = client.gets
-              puts command 
               ans = 0
               command
             else

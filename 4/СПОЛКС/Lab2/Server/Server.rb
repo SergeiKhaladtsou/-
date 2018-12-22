@@ -10,13 +10,13 @@ def resume_download(file_name, packeth, socket)
     puts "File don't exist"
   else
     file = File.open file_name, "rb"
-    socket.puts server_command
-    socket.puts file_name
+    server.send server_command.to_s, 0, sender
+    server.send file_name, 0, sender
     last_packeth = file.size % SIZE_PACKETH
-    socket.puts last_packeth
+    server.send last_packeth.to_s, 0, sender
     quantity = file.size / SIZE_PACKETH
-    socket.puts quantity
-    socket.puts packeth
+    server.send quantity.to_s, 0, sender
+    server.send packeth.to_s, 0, sender
     quantity.times do |pack|
       data = file.read(SIZE_PACKETH)
       next if pack < packeth.to_i
@@ -37,13 +37,13 @@ end
 
 def resume_upload(file_name, packeth, socket)
   server_command = 8
-  socket.puts server_command
-  socket.puts file_name
-  socket.puts packeth
+  server.send server_command.to_s, 0,sender
+  server.send file_name, 0, sender
+  server.send packeth.to_s, 0, sender
   file = File.open file_name, "ab"
-  last_packeth = socket.gets
+  last_packeth, sender = server.recvfrom(SIZE_PACKETH)
   last_packeth.strip!
-  quantity = socket.gets
+  quantity, sender = server.recvfrom(SIZE_PACKETH)
   quantity.strip!
   quantity.to_i.times do |pack|
     next if pack < packeth.to_i
@@ -69,18 +69,19 @@ server = Socket.new(AF_INET, SOCK_DGRAM, 0)
 server.bind(Addrinfo.udp(address.strip!, "2000"))
 
 p server.connect_address
+ok, sender = server.recvfrom(SIZE_PACKETH)
 
 loop do
   unless File.exist?("Error_report")
       command, sender = server.recvfrom(SIZE_PACKETH)
   else
     puts "Resume ..."
-      report = File.open "Error_report", "rb"
+    report = File.open "Error_report", "rb"
     data = report.read
     report.close
-      comand, file_name, packeth = data.split("-")
+    comand, file_name, packeth = data.split("-")
     comand.strip!
-      file_name.strip!
+    file_name.strip!
     packeth.strip!
     File.delete("Error_report")
     if comand.to_i == 3
@@ -127,12 +128,14 @@ loop do
       file_name.strip!
       unless File.exist?(file_name)
         puts "File don't exits!"
-        socket.puts 0
+        server.send "0", 0
       else
         file = File.open file_name, "rb"
-        server.send file.size, 0, sender
-        server.send last_packeth = file.size % SIZE_PACKETH, 0, sender
-        server.send quantity = file.size / SIZE_PACKETH, 0, sender
+        server.send file.size.to_s, 0, sender
+        last_packeth = file.size % SIZE_PACKETH
+        server.send last_packeth.to_s, 0, sender
+        quantity = file.size / SIZE_PACKETH
+        server.send quantity.to_s, 0, sender
         quantity.times do |packeth|
           data = file.read(SIZE_PACKETH)
           begin
