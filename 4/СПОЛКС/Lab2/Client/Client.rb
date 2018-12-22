@@ -65,10 +65,17 @@ loop do
       start_time = Time.now
       quantity.times do |packeth|
         puts packeth
-        client.send file.read(SIZE_PACKETH), 0
-        ans, sender = client.recvfrom(SIZE_PACKETH)
+        data = file.read(SIZE_PACKETH)
+        client.send data, 0
+        asc, sender = client.recvfrom(SIZE_PACKETH)
+        while asc != data
+          client.send data, 0
+          asc, sender = client.recvfrom(SIZE_PACKETH)
+        else
+          client.send "yes"
+        end
       end
-      client.write file.read(last_packeth)
+      client.send file.read(last_packeth), 0
       file.close
       puts "Upload time: #{Time.now - start_time}"
     end

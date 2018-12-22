@@ -111,8 +111,16 @@ loop do
         quantity.to_i.times do |packeth|
           begin
             data, sender = server.recvfrom(SIZE_PACKETH)
-            file.write data
-            server.send "yes", 0, sender
+            server.send data, 0, sender
+            ans, sender = server.recvfrom(SIZE_PACKETH)
+            while ans != "yes"
+              data, sender = server.recvfrom(SIZE_PACKETH)
+              server.send data, 0, sender
+              ans, sender = server.recvfrom(SIZE_PACKETH)
+            else
+              file.write data
+            end
+            #server.send "yes", 0, sender
           rescue
             report = File.new "Error_report", "wb"
             report.write "3-"
