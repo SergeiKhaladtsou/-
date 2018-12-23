@@ -52,56 +52,77 @@ loop do
     printf "Input file name: "
     file_name = gets
     file_name.strip!
-    client.send file_name, 0
     unless File.exist?(file_name)
-      puts "File don't exits!"
+      puts "File don't exist!"
       client.send 0, 0
     else
+      client.send file_name, 0
       file = File.open file_name, "rb"
-      client.send file.size.to_s, 0
       last_packeth = file.size % SIZE_PACKETH
       quantity = file.size / SIZE_PACKETH
       client.send quantity.to_s, 0
-      start_time = Time.now
+      client.send last_packeth.to_s, 0
+      time = Time.now
       quantity.times do |packeth|
         puts packeth
         data = file.read(SIZE_PACKETH)
-        client.send data, 0
-        asc, sender = client.recvfrom(SIZE_PACKETH)
-        while asc != data
-          client.send data, 0
-          asc, sender = client.recvfrom(SIZE_PACKETH)
-        else
-          client.send "yes"
+        client.send "#{packeth}-#{data}", 0
+        ans = "n"
+        ans, sender = client.recvfrom(SIZE_PACKETH)
+        while ans == "n"
+          puts packeth
+          client.send "#{packeth}-#{data}", 0
+          ans, sender = client.recvfrom(SIZE_PACKETH)
         end
       end
-      client.send file.read(last_packeth), 0
+      puts quantity
+      data = file.read(last_packeth)
       file.close
-      puts "Upload time: #{Time.now - start_time}"
+      client.send "#{quantity}-#{data}", 0
+      ans = "n"
+      ans, sender = client.recvfrom(SIZE_PACKETH)
+      while ans == "n"
+        puts quantity
+        puts ans
+        client.send "#{quantity}-#{data}", 0
+        ans, sender = client.recvfrom(SIZE_PACKETH)
+      end
+      puts "Upload time: #{Time.now - time}"
     end
   when 4
-    print "Input file name: "
+    puts "File list:"
+    puts `ls`
+    puts
+    printf "Input file name: "
     file_name = gets
     file_name.strip!
     client.send file_name, 0
-    check_size, sender = client.recvfrom(SIZE_PACKETH)
-    check_size.strip!
-    last_packeth, sender = client.recvfrom(SIZE_PACKETH)
-    last_packeth.strip!
+    file = File.new file_name, "wb"
     quantity, sender = client.recvfrom(SIZE_PACKETH)
-    quantity.strip!
-    unless check_size.to_i == 0
-      start_time = Time.now
-      file = File.open file_name, "wb"
-      quantity.to_i.times do |packeth|
-        file.write client.read(SIZE_PACKETH)
+    last_packeth, sender = client.recvfrom(SIZE_PACKETH)
+    quantity = quantity.strip.to_i
+    last_packeth = last_packeth.strip.to_i
+    quantity.times do |packeth|
+      puts packeth
+      data, sender = client.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
+      while data.split("-")[0].to_i != packeth
+        puts data.split("-")[0]
+        client.send "n", 0
+        data, sender = client.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
       end
-      file.write client.read(last_packeth.to_i)
-      file.close
-      puts "Upload time: #{Time.now - start_time}"
-    else
-      puts "File don't exist!"
+      client.send "y", 0
+      file.write data.sub("#{data.split("-")[0]}-", "")
     end
+    puts quantity
+    data, sender = client.recvfrom(last_packeth + quantity.to_s.size + 1)
+    while data.split("-")[0].to_i != quantity
+      puts data.split("-")[0]
+      client.send "n", 0
+      data, sender = client.recvfrom(last_packeth + quantity.to_s.size + 1)
+    end
+    client.send "y", 0
+    file.write data.sub("#{data.split("-")[0]}-", "")
+    file.close
   when 5
     client.close
     break
