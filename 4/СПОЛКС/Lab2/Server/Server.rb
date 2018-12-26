@@ -97,6 +97,7 @@ def resume_upload(file_name, pack, socket)
   end
   server.send "y", 0, sender
   ans.each_index do |index|
+    next if index < pack
     file.write ans[index]
   end
   file.close
