@@ -109,6 +109,9 @@ address = gets
 server = Socket.new(AF_INET, SOCK_DGRAM, 0)
 server.bind(Addrinfo.udp(address.strip!, "2000"))
 
+optval = [3, 0].pack("1_2")
+server.setsockopt(Socket::SOL_SOCKET, Socket::SO_RCVTIMEO, optval)
+
 p server.connect_address
 ok, sender = server.recvfrom(SIZE_PACKETH)
 
