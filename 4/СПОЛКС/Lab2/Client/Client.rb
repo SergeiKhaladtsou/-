@@ -14,9 +14,9 @@ client.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, 30)
 client.connect(sockaddr)
 client.send "1", 0
 puts "Do you want resume ? (1/0)"
-ans = gets
+ansv = gets
 loop do
-  command = if ans.to_i == 1
+  command = if ansv.to_i == 1
               command, sender = client.recvfrom(SIZE_PACKETH)
               puts command
               ans = 0
@@ -30,6 +30,7 @@ loop do
               puts "6. Close server and disconnect"
               command = gets
               command = command.strip.to_i.to_s 2
+              puts "command = #{command}"
               client.send command, 0
               command
             end
@@ -54,7 +55,7 @@ loop do
     file_name.strip!
     unless File.exist?(file_name)
       puts "File don't exist!"
-      client.send 0, 0
+      client.send 0
     else
       client.send file_name, 0
       file = File.open file_name, "rb"
@@ -63,36 +64,22 @@ loop do
       client.send quantity.to_s, 0
       client.send last_packeth.to_s, 0
       time = Time.now
-      quantity.times do |packeth|
-        puts packeth
-        data = file.read(SIZE_PACKETH)
-        client.send "#{packeth}-#{data}", 0
-        ans = "n"
-        ans, sender = client.recvfrom(SIZE_PACKETH)
-        while ans == "n"
-          puts packeth
-          client.send "#{packeth}-#{data}", 0
-          ans, sender = client.recvfrom(SIZE_PACKETH)
+      data, sender = client.recvfrom(65507)
+      while data != "y" and data.size != 1
+        data = data.split("-")
+        file = File.open file_name, "rb"
+        (quantity + 1).times do |index|
+          message = file.read(SIZE_PACKETH)
+          next if !data.include?(index.to_s)
+          client.send "#{index}-#{message}", 0
         end
-      end
-      puts quantity
-      data = file.read(last_packeth)
-      file.close
-      client.send "#{quantity}-#{data}", 0
-      ans = "n"
-      ans, sender = client.recvfrom(SIZE_PACKETH)
-      while ans == "n"
-        puts quantity
-        puts ans
-        client.send "#{quantity}-#{data}", 0
-        ans, sender = client.recvfrom(SIZE_PACKETH)
+        sleep(0.1)
+        client.send "y", 0
+        data, sender = client.recvfrom(65507)
       end
       puts "Upload time: #{Time.now - time}"
     end
   when 4
-    puts "File list:"
-    puts `ls`
-    puts
     printf "Input file name: "
     file_name = gets
     file_name.strip!
@@ -102,27 +89,29 @@ loop do
     last_packeth, sender = client.recvfrom(SIZE_PACKETH)
     quantity = quantity.strip.to_i
     last_packeth = last_packeth.strip.to_i
-    quantity.times do |packeth|
-      puts packeth
+    ans = Array.new quantity + 1
+    time = Time.now
+    while ans.include?(nil)
+      message = ""
+      ans.each_index do |item|
+        next if ans[item] != nil
+        message = "#{message}-#{item}"
+      end
+      client.send message, 0
       data, sender = client.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
-      while data.split("-")[0].to_i != packeth
-        puts data.split("-")[0]
-        client.send "n", 0
+      while data != "y"
+        index = data.split("-")[0].to_i
+        ans[index] = data.sub("#{index}-", "")
         data, sender = client.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
       end
-      client.send "y", 0
-      file.write data.sub("#{data.split("-")[0]}-", "")
     end
-    puts quantity
-    data, sender = client.recvfrom(last_packeth + quantity.to_s.size + 1)
-    while data.split("-")[0].to_i != quantity
-      puts data.split("-")[0]
-      client.send "n", 0
-      data, sender = client.recvfrom(last_packeth + quantity.to_s.size + 1)
-    end
+    puts "Upload time: #{Time.now - time}"
     client.send "y", 0
-    file.write data.sub("#{data.split("-")[0]}-", "")
+    ans.each_index do |index|
+      file.write ans[index]
+    end
     file.close
+    puts "After write file: #{Time.now - time}"
   when 5
     client.close
     break
@@ -156,11 +145,18 @@ loop do
     client.send last_packeth.to_s, 0
     quantity = file.size / SIZE_PACKETH
     client.send quantity.to_s, 0
-    quantity.to_i.times do |pack|
-      data = file.read(SIZE_PACKETH)
-      next if pack < packeth.to_i
-      puts pack
-      client.send data, 0
+    data, sender = client.recvfrom(65507)
+    while data != "y" and data.size != 1
+      data = data.split("-")
+      file = File.open file_name, "rb"
+      (quantity + 1).times do |index|
+        message = file.read(SIZE_PACKETH)
+        next if !data.include?(index.to_s)
+        client.send "#{index}-#{message}", 0
+      end
+      sleep(0.1)
+      client.send "y", 0
+      data, sender = client.recvfrom(65507)
     end
     client.send file.read(last_packeth), 0
     file.close

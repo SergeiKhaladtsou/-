@@ -4,7 +4,7 @@ SIZE_PACKETH = 1024
 
 include Socket::Constants
 
-def resume_download(file_name, packeth, socket)
+def resume_download(file_name, pack, socket)
   server_command = 7
   unless File.exist?(file_name)
     puts "File don't exist"
@@ -16,49 +16,89 @@ def resume_download(file_name, packeth, socket)
     server.send last_packeth.to_s, 0, sender
     quantity = file.size / SIZE_PACKETH
     server.send quantity.to_s, 0, sender
-    server.send packeth.to_s, 0, sender
-    quantity.times do |pack|
+    server.send pack.to_s, 0, sender
+    quantity.times do |packeth|
       data = file.read(SIZE_PACKETH)
-      next if pack < packeth.to_i
+      next if pack.to_i < packeth
+      puts packeth
       begin
-        socket.write data
+        server.send "#{packeth}-#{data}", 0, sender
       rescue
         report = File.new "Error_report", "wb"
-        report.write "3-"
-        report.write "#{file_name}-"
-        report.write "#{pack}-"
+        report.write "4-#{file_name}-#{packeth}"
         exit
       end
+      ans = "n"
+      ans, sender = server.recvfrom(SIZE_PACKETH)
+      while ans == "n"
+        puts packeth
+        server.send "#{packeth}-#{data}", 0, sender
+        ans, sender = server.recvfrom(SIZE_PACKETH)
+      end
     end
-    socket.write file.read(last_packeth)
+    puts quantity
+    data = file.read(last_packeth)
     file.close
+    begin
+      server.send "#{packeth}-#{data}", 0, sender
+    rescue
+      report = File.new "Error_report", "wb"
+      report.write "4-#{file_name}-#{packeth}"
+      exit
+    end
+    ans = "n"
+    ans, sender = server.recvfrom(SIZE_PACKETH)
+    while ans == "n"
+      puts quantity
+      puts ans
+      server.send "#{quantity}-#{data}", 0, sender
+      ans, sender = server.recvfrom(SIZE_PACKETH)
+    end
   end
 end
 
-def resume_upload(file_name, packeth, socket)
+def resume_upload(file_name, pack, socket)
   server_command = 8
-  server.send server_command.to_s, 0,sender
+  server.send server_command.to_s, 0 ,sender
   server.send file_name, 0, sender
-  server.send packeth.to_s, 0, sender
+  server.send pack.to_s, 0, sender
   file = File.open file_name, "ab"
   last_packeth, sender = server.recvfrom(SIZE_PACKETH)
   last_packeth.strip!
   quantity, sender = server.recvfrom(SIZE_PACKETH)
   quantity.strip!
-  quantity.to_i.times do |pack|
-    next if pack < packeth.to_i
-    begin
-      data = socket.read(SIZE_PACKETH)
-    rescue
-      report = File.new "Error_report", "wb"
-      report.write "4-"
-      report.write "#{file_name}-"
-      report.write "#{pack}-"
-      exit
+  ans = Array.new quantity + 1
+  while ans.include?(nil)
+    message = ""
+    ans.each_index do |item|
+      next if ans[item] != nil
+      begin
+        message = "#{message}-#{item}"
+      rescue
+        ans.each_index do |index|
+          if ans[index] == nil
+            report = File.new "Error_report", "wb"
+            report.write "3-#{file_name}-#{index}-"
+            report.close
+            exit
+          else
+            file.write ans[index]
+          end
+        end
+      end
     end
-    file.write data
+    server.send message, 0, sender
+    data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
+    while data != "y"
+      index = data.split("-")[0].to_i
+      ans[index] = data.sub("#{index}-", "")
+      data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
+    end
   end
-  file.write socket.read(last_packeth.to_i)
+  server.send "y", 0, sender
+  ans.each_index do |index|
+    file.write ans[index]
+  end
   file.close
 end
 
@@ -74,6 +114,7 @@ ok, sender = server.recvfrom(SIZE_PACKETH)
 loop do
   unless File.exist?("Error_report")
       command, sender = server.recvfrom(SIZE_PACKETH)
+      puts "command = #{command.to_i 2}"
   else
     puts "Resume ..."
     report = File.open "Error_report", "rb"
@@ -106,86 +147,63 @@ loop do
       last_packeth, sender = server.recvfrom(SIZE_PACKETH)
       quantity = quantity.strip.to_i
       last_packeth = last_packeth.strip.to_i
-      quantity.times do |packeth|
-        puts packeth
-        begin
-          data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
-        rescue
-          report = File.new "Error_report", "wb"
-          report.write "3-#{file_name}-#{packeth}"
-          exit
-        end
-        while data.split("-")[0].to_i != packeth
-          puts data.split("-")[0]
-          server.send "n", 0, sender
+      ans = Array.new quantity + 1
+      while ans.include?(nil)
+        message = ""
+        ans.each_index do |item|
+          next if ans[item] != nil
           begin
-            data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
+            message = "#{message}-#{item}"
           rescue
-            report = File.new "Error_report", "wb"
-            report.write "3-#{file_name}-#{packeth}"
-            exit
+            ans.each_index do |index|
+              if ans[index] == nil
+                report = File.new "Error_report", "wb"
+                report.write "3-#{file_name}-#{index}-"
+                report.close
+                exit
+              else
+                file.write ans[index]
+              end
+            end
           end
         end
-        server.send "y", 0, sender
-        file.write data.sub("#{data.split("-")[0]}-", "")
-      end
-      puts quantity
-      data, sender = server.recvfrom(last_packeth + quantity.to_s.size + 1)
-      while data.split("-")[0].to_i != quantity
-        puts data.split("-")[0]
-        server.send "n", 0, sender
-        data, sender = server.recvfrom(last_packeth + quantity.to_s.size + 1)
+        server.send message, 0, sender
+        data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
+        while data != "y"
+          index = data.split("-")[0].to_i
+          ans[index] = data.sub("#{index}-", "")
+          data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
+        end
       end
       server.send "y", 0, sender
-      file.write data.sub("#{data.split("-")[0]}-", "")
+      ans.each_index do |index|
+        file.write ans[index]
+      end
       file.close
     when 4
       file_name, sender = server.recvfrom(SIZE_PACKETH)
       file_name.strip!
       unless File.exist?(file_name)
         puts "File don't exist!"
-        server.send 0, 0, sender
+        server.send 0, 0
       else
         file = File.open file_name, "rb"
         last_packeth = file.size % SIZE_PACKETH
         quantity = file.size / SIZE_PACKETH
         server.send quantity.to_s, 0, sender
         server.send last_packeth.to_s, 0, sender
-        quantity.times do |packeth|
-          puts packeth
-          data = file.read(SIZE_PACKETH)
-          begin
-            server.send "#{packeth}-#{data}", 0, sender
-          rescue
-            report = File.new "Error_report", "wb"
-            report.write "4-#{file_name}-#{packeth}"
-            exit
+        data, sender = server.recvfrom(65507)
+        while data != "y" and data.size != 1
+          data = data.split("-")
+          file = File.open file_name, "rb"
+          (quantity + 1).times do |index|
+            message = file.read(SIZE_PACKETH)
+            next if !data.include?(index.to_s)
+            server.send "#{index}-#{message}", 0, sender
           end
-          ans = "n"
-          ans, sender = server.recvfrom(SIZE_PACKETH)
-          while ans == "n"
-            puts packeth
-            server.send "#{packeth}-#{data}", 0, sender
-            ans, sender = server.recvfrom(SIZE_PACKETH)
-          end
-        end
-        puts quantity
-        data = file.read(last_packeth)
-        file.close
-        begin
-          server.send "#{packeth}-#{data}", 0, sender
-        rescue
-          report = File.new "Error_report", "wb"
-          report.write "4-#{file_name}-#{packeth}"
-          exit
-        end
-        ans = "n"
-        ans, sender = server.recvfrom(SIZE_PACKETH)
-        while ans == "n"
-          puts quantity
-          puts ans
-          server.send "#{quantity}-#{data}", 0, sender
-          ans, sender = server.recvfrom(SIZE_PACKETH)
+          sleep(0.1)
+          server.send "y", 0, sender
+          data, sender = server.recvfrom(65507)
         end
       end
     when 5
