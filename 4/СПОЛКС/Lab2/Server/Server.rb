@@ -153,8 +153,28 @@ loop do
         message = ""
         ans.each_index do |item|
           next if ans[item] != nil
+          message = "#{message}-#{item}"
+        end
+        server.send message, 0, sender
+        begin
+          data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
+        rescue
+          ans.each_index do |index|
+            if ans[index] == nil
+              report = File.new "Error_report", "wb"
+              report.write "3-#{file_name}-#{index}-"
+              report.close
+              exit
+            else
+              file.write ans[index]
+            end
+          end
+        end
+        while data != "y"
+          index = data.split("-")[0].to_i
+          ans[index] = data.sub("#{index}-", "")
           begin
-            message = "#{message}-#{item}"
+            data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
           rescue
             ans.each_index do |index|
               if ans[index] == nil
@@ -167,13 +187,6 @@ loop do
               end
             end
           end
-        end
-        server.send message, 0, sender
-        data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
-        while data != "y"
-          index = data.split("-")[0].to_i
-          ans[index] = data.sub("#{index}-", "")
-          data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
         end
       end
       server.send "y", 0, sender
