@@ -111,8 +111,9 @@ server.bind(Addrinfo.udp(address.strip!, "2000"))
 
 secs = Integer(3)
 usecs = Integer(0)
-optval = [secs, usecs].pack("1_2")
+optval = [secs, usecs].pack("l_2")
 server.setsockopt(Socket::SOL_SOCKET, Socket::SO_RCVTIMEO, optval)
+#server.setsockopt Socket::SOL_SOCKET, Socket::SO_SNDTIMEO, optval
 
 p server.connect_address
 ok, sender = server.recvfrom(SIZE_PACKETH)
@@ -164,13 +165,16 @@ loop do
         begin
           data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
         rescue
+          puts "rescue"
           ans.each_index do |index|
+            puts "each_index"
             if ans[index] == nil
               report = File.new "Error_report", "wb"
               report.write "3-#{file_name}-#{index}-"
               report.close
               exit
             else
+              puts "write"
               file.write ans[index]
             end
           end
@@ -181,13 +185,16 @@ loop do
           begin
             data, sender = server.recvfrom(SIZE_PACKETH + quantity.to_s.size + 1)
           rescue
+            puts "rescue"
             ans.each_index do |index|
+              puts "each_index"
               if ans[index] == nil
                 report = File.new "Error_report", "wb"
                 report.write "3-#{file_name}-#{index}-"
                 report.close
                 exit
               else
+                puts "write"
                 file.write ans[index]
               end
             end
