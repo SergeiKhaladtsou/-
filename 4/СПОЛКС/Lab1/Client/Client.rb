@@ -63,7 +63,7 @@ loop do
       client.puts quantity = file.size / SIZE_PACKETH
       start_time = Time.now
       quantity.times do |packeth|
-        puts packeth
+        #puts packeth
         data = file.read(SIZE_PACKETH)
         client.write data
       end
