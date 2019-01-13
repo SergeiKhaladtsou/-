@@ -1,13 +1,13 @@
 class Application
 
-  attr_accessor :create, :wait, :delete, :queue, :work
+  attr_accessor :create, :wait, :delete, :queue, :destroy
 
-  def initialize create_time, work_time
-    @create = create_time
-    @wait = 0
-    @queue = 0
-    @delete = 0
-    @work = work_time
+  def initialize create_time
+    @create = create_time #время создания
+    @wait = 0             #максимальное место в очереди
+    @queue = 0            #время в очереди
+    @delete = 0           #время удаления
+    @destroy = 0          #время обработки
   end
 
 end
